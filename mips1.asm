@@ -149,8 +149,6 @@ add_customer:
 	
 	la $t0, CUSTOMERS # address of the array
 	lw $t1, Customer_Count
-	
-	
 	lw $t2, CUSTOMER_SIZE
 	
 	unique_id_check_loop:
@@ -234,12 +232,13 @@ display_customer:
     add $t2, $t2, $t1 # holds the location of the next customer
     lw $t3, CUSTOMER_SIZE # how many bytes a customer costs
     
-    mul $s0, $t2, $t3 #last adress to check
+    mul $s0, $t2, $t3 
+    add $s0, $s0, $t1 #last adress to check
     
     	#starts a loop
     start_display_loop:
     	lw $t4, ($t1)
-        beq $t4, $s0, start_error_Id_display
+        beq $t1, $s0, start_error_Id_display
     	beq $t4, $t0, end_display_loop
     	add $t1, $t1, $t3
     	j start_display_loop	
