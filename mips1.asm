@@ -183,6 +183,11 @@ add_customer:
 	sw $a2, ($t0) # storing balance
 	add $t0, $t0, 4
 	
+	la $t1, Customer_Count
+	lw $t2, ($t1)
+	addi $t2, $t2, 1
+	sw $t2, ($t1)
+	
 	lw $t1, CUSTOMER_SIZE
 	sub $t0, $t0, $t1 # setting t0 to the address for id of added customer
 	
