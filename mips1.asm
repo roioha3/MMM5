@@ -311,15 +311,15 @@ update_balance:
    	move $t0, $a0
     la $t1, CUSTOMERS
     lw $t2, Customer_Count # how many customers exists
-    add $t2, $t2, $t1 # holds the location of the next customer
     lw $t3, CUSTOMER_SIZE # how many bytes a customer costs
     
     mul $s0, $t2, $t3 #last adress to check
+    add $s0, $s0, $t1
     
     	#starts a loop
     start_update_loop:
     	lw $t4, ($t1)
-        beq $t4, $s0, start_error_Id_update
+        beq $t1, $s0, start_error_Id_update
     	beq $t4, $t0, end_update_loop
     	add $t1, $t1, $t3
     	j start_update_loop	
@@ -328,7 +328,8 @@ update_balance:
     la $t2, ($t1)
     addi $t1, $t1, 100
     sw $a1, ($t1)
-
+    move $t3, $a1
+    
 	li $v0, 4 
    	la $a0, SUCCESS
    	syscall # prints "Success: "
@@ -359,6 +360,15 @@ update_balance:
     
     
     start_error_Id_update:
+        li $v0, 4
+    	la $a0, ERROR_CUSTOMER_NOT_EXIST
+    	syscall
+    	li $v0, 1
+    	move $a0, $t0
+    	syscall
+    	li $v0, 4
+    	la $a0, ERROR_DOESNOT_EXIST
+    	syscall # prints the error message
     end_error_Id_update:
     
     
