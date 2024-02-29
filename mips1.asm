@@ -219,6 +219,7 @@ add_customer:
 	add $sp, $sp, 4
 	
 	jr $ra
+	
 display_customer:
     subi $sp, $sp, 4 
     sw $s0, ($sp) # stores the value of $s0 on the stack
@@ -229,13 +230,12 @@ display_customer:
     move $t0, $a0
     la $t1, CUSTOMERS
     lw $t2, Customer_Count # how many customers exists
-    add $t2, $t2, $t1 # holds the location of the next customer
     lw $t3, CUSTOMER_SIZE # how many bytes a customer costs
     
     mul $s0, $t2, $t3 
     add $s0, $s0, $t1 #last adress to check
     
-    	#starts a loop
+    #starts a loop
     start_display_loop:
     	lw $t4, ($t1)
         beq $t1, $s0, start_error_Id_display
