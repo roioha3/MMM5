@@ -20,6 +20,7 @@ COMMA: .asciiz ", "
 DOWN_LINE: .asciiz "\n"
 SUCCESS_CUSTOMER_MSG: .asciiz "Success: Cutomer "
 WAS_ADDED_SUCCESSFULLY: .asciiz " was added successfully\n"
+DELETED_MSG: .asciiz " deleted\n"
 
 # Errors:
 ERROR_CUSTOMER_NOT_EXIST: .asciiz "Error: Customer "
@@ -128,68 +129,51 @@ main_menu:
 		
 		j main_menu
 	delete_record_input:
-		j main_menu
-		# dont know if we will do it
 		li $v0, 4 # prints "Enter ID: "
 		la $a0, ENTER_ID
 		syscall
 				
 		li $v0, 5
 		syscall # gets an integer from the user.
+		
 		move $a0, $v0
 		jal delete_record
 		
 		j main_menu
+
 # a0 = id, $a1 = address of name, $a2 = balance
 add_customer:
 	subi $sp, $sp, 4
+	sw $ra, ($sp)
+	subi $sp, $sp, 4
 	sw $fp, ($sp)
 	move $fp, $sp
+	
 	
 	
 	la $t0, CUSTOMERS # address of the array
 	lw $t1, Customer_Count
 	lw $t2, CUSTOMER_SIZE
 	
-	unique_id_check_loop:
-		beq $t1, $zero, end_unique_id_loop
-		lw $t3, ($t0)
-		beq $t3, $a0, user_already_exists
-		add $t0, $t0, $t2 # t0 += CUSTOMER_SIZE
-		subi $t1, $t1, 1 # customersToCheck -= 1
-		j unique_id_check_loop
-		
-	end_unique_id_loop:
+	subi $sp, $sp, 4
+	sw, $a0, ($sp)
 	
-	sw $a0, ($t0) # storing id
-	addi $t0, $t0, 4
-	move $t1, $t0 # iterator for the name memory in array
-	move $t2, $a1 # iterator for the name in the buffer
+	jal find_customer #checking if id exists
 	
-	store_name_loop:
-		lb $t3, ($t2)
-		beq $t3, $zero, end_name_loop
-		sb $t3, ($t1)
-		
-		addi $t1, $t1, 1
-		addi $t2, $t2, 1
-		j store_name_loop
-		
-	end_name_loop:
 	
-	add $t0, $t0, 100
-	sw $a2, ($t0) # storing balance
-	add $t0, $t0, 4
+	bne $v0, $zero, user_already_exists
 	
-	la $t1, Customer_Count
-	lw $t2, ($t1)
-	addi $t2, $t2, 1
-	sw $t2, ($t1)
 	
-	lw $t1, CUSTOMER_SIZE
-	sub $t0, $t0, $t1 # setting t0 to the address for id of added customer
 	
-	lw $t2, ($t0) # id of added customer
+	move $a3, $t0
+	jal insert_customer
+	
+	lw $t0, Customer_Count
+	add $t0, $t0, 1
+	sw $t0, Customer_Count
+	
+	
+	lw $t2, ($sp) # id of added customer
 	
 	la $a0, SUCCESS_CUSTOMER_MSG
 	li $v0, 4
@@ -202,6 +186,7 @@ add_customer:
 	la $a0, WAS_ADDED_SUCCESSFULLY
 	li $v0, 4
 	syscall
+	
 	j end_add_customer
 	
 	user_already_exists:
@@ -218,68 +203,51 @@ add_customer:
 	li $v0, 4
 	syscall
 	
+	j end_add_customer
+	
+	
+	
 	end_add_customer: 
 	move $sp, $fp
 	lw $fp, ($sp)
-	add $sp, $sp, 4
+	addi $sp, $sp, 4
+	lw $ra ($sp)
+	addi $sp, $sp, 4
 	
 	jr $ra
-	
+
+# a0 = id 
 display_customer:
+	subi $sp, $sp, 4
+	sw $ra, ($sp)
     subi $sp, $sp, 4 
     sw $s0, ($sp) # stores the value of $s0 on the stack
     subi $sp, $sp, 4
     sw $fp, ($sp)
     move $fp, $sp
     
-    move $t0, $a0
-    la $t1, CUSTOMERS
-    lw $t2, Customer_Count # how many customers exists
-    lw $t3, CUSTOMER_SIZE # how many bytes a customer costs
     
-    mul $s0, $t2, $t3 
-    add $s0, $s0, $t1 #last adress to check
-    
+    move $s0, $a0
     #starts a loop
-    start_display_loop:
-    	lw $t4, ($t1)
-        beq $t1, $s0, start_error_Id_display
-    	beq $t4, $t0, end_display_loop
-    	add $t1, $t1, $t3
-    	j start_display_loop	
-    end_display_loop:
-    				  # $t0 holds customer's ID
+    jal find_customer
+    move $t0, $s0
+    beq $v0, $zero, start_error_Id_display
+    move $t1, $v1
+    
+					# $t0 holds customer's ID		
     	addi $t1, $t1, 4
-    	la $t2, ($t1) # $t2 holds the adress for customer's name
+    	la $t2, ($t1) # $t2 holds the address for customer's name
     	addi $t1, $t1, 100
-		lw $t3, ($t1) # $t3 holds the balance of the customer
+	lw $t3, ($t1) # $t3 holds the balance of the customer
 		
-		li $v0, 4 
-   		la $a0, SUCCESS
-   		syscall # prints "Success: "
-   		li $v0, 1 
-   		move $a0, $t0
-   		syscall # prints the ID
+	li $v0, 4 
+   	la $a0, SUCCESS
+   	syscall # prints "Success: "
    		
-   		li $v0, 4
-   		la $a0, COMMA
-   		syscall # ", "
-   		 
-   		move $a0, $t2
-   		syscall # prints the Name
-   		
-   		li $v0, 4
-   		la $a0, COMMA
-   		syscall # ", "
-   		
-   		li $v0, 1
-   		move $a0, $t3
-   		syscall # prints the balance
-   		
-   		li $v0, 4
-   		la $a0, DOWN_LINE
-   		syscall # enters line
-   		
+   	move $a0, $t0
+   	move $a1, $t2
+   	move $a2, $t3
+   	jal print_customer
     	j end_error_Id_display
     	
     start_error_Id_display:
@@ -299,33 +267,29 @@ display_customer:
     addi $sp, $sp, 4
     lw $s0, ($sp)
     addi $sp, $sp, 4
+    lw $ra, ($sp)
+    addi $sp, $sp, 4
     jr $ra
+
     
 update_balance:
+	subi $sp, $sp, 4
+	sw $ra, ($sp)
 	subi $sp, $sp, 4 
     sw $s0, ($sp) # stores the value of $s0 on the stack
     subi $sp, $sp, 4
     sw $fp, ($sp)
     move $fp, $sp
     
-   	move $t0, $a0
-    la $t1, CUSTOMERS
-    lw $t2, Customer_Count # how many customers exists
-    lw $t3, CUSTOMER_SIZE # how many bytes a customer costs
-    
-    mul $s0, $t2, $t3 #last adress to check
-    add $s0, $s0, $t1
-    
+    move $s0, $a0
     	#starts a loop
-    start_update_loop:
-    	lw $t4, ($t1)
-        beq $t1, $s0, start_error_Id_update
-    	beq $t4, $t0, end_update_loop
-    	add $t1, $t1, $t3
-    	j start_update_loop	
-    end_update_loop:
+    	jal find_customer
+    	move $t0, $s0
+    	beq $v0, $zero, start_error_Id_update
+    	move $t1, $v1
+    lw $t0, ($t1)
     addi $t1, $t1, 4
-    la $t2, ($t1)
+    move $t2, $t1
     addi $t1, $t1, 100
     sw $a1, ($t1)
     move $t3, $a1
@@ -333,30 +297,13 @@ update_balance:
 	li $v0, 4 
    	la $a0, SUCCESS
    	syscall # prints "Success: "
-   	li $v0, 1 
-   	move $a0, $t0
-   	syscall # prints the ID
    	
-   	li $v0, 4
-   	la $a0, COMMA
-   	syscall # ", "
-   		 
-   	move $a0, $t2
-   	syscall # prints the Name
-   		
-   	li $v0, 4
-   	la $a0, COMMA
-   	syscall # ", "
-   		
-   	li $v0, 1
-   	move $a0, $t3
-   	syscall # prints the balance
-   		
-   	li $v0, 4
-   	la $a0, DOWN_LINE
-   	syscall # enters line
-   		
-    j end_error_Id_display
+   	move $a0, $t0
+   	move $a1, $t2
+   	move $a2, $t3
+   	jal print_customer
+   	
+    j end_error_Id_update
     
     
     start_error_Id_update:
@@ -377,8 +324,189 @@ update_balance:
     addi $sp, $sp, 4
     lw $s0, ($sp)
     addi $sp, $sp, 4
+    lw $ra, ($sp)
+    addi $sp, $sp, 4
     jr $ra
+    
+# a0 = id
 delete_record:
+	subi $sp, $sp, 4
+	sw $ra, ($sp)
+	subi $sp, $sp, 4
+	sw $fp, ($sp)
+	move $fp, $sp
+	subi $sp, $sp, 4
+	
+	sw $a0, ($sp)
+	jal find_customer
+	beq $v0, $zero, set_up_error_customer_doesnt_exist
+	
+	# checking if customer of id is last
+	la $t0, CUSTOMERS
+	lw $t1, Customer_Count
+	subi $t1, $t1, 1
+	lw $t2, CUSTOMER_SIZE
+	mul $t1, $t1, $t2
+	add $t0, $t0, $t1 # has the address of the last customer
+	beq $v1, $t0, decrease_customer_count
+	
+	# copying last customer:
+	lw $a0, ($t0) # a0 = id
+	add $t0, $t0, 4
+	move $a1, $t0 #a1 = address of name
+	add $t0, $t0, 100
+	lw $a2, ($t0) #a2 = balance
+	move $a3, $v1 # a3 = address of deleted customer
+	jal insert_customer # inserting last customer in deleted customer place
+	
+	decrease_customer_count:
+		lw $t0, Customer_Count
+		subi $t0, $t0, 1
+		sw, $t0, Customer_Count
+	
+	la $a0, SUCCESS_CUSTOMER_MSG
+	li $v0, 4
+	syscall
+	
+	lw $a0, ($sp)
+	li $v0, 1
+	syscall
+	
+	la $a0, DELETED_MSG
+	li $v0, 4
+	syscall
+	
+	j end_delete_record
+	
+	set_up_error_customer_doesnt_exist:
+	lw $a0, ($sp) 
+	jal error_customer_doesnt_exist
+	
+	end_delete_record:
+	move $sp, $fp
+	lw $fp ($sp)
+	addi $sp, $sp, 4
+	lw $ra, ($sp)
+	addi $sp, $sp, 4
+	jr $ra
+	
+# a0 = id
+# a1 = address name
+# a2 = balance
+print_customer:
+	subi $sp, $sp, 4
+	sw $fp, ($sp)
+	move $fp, $sp
+	
+   	li $v0, 1 
+   	syscall # prints the ID
+   	
+   	li $v0, 4
+   	la $a0, COMMA
+   	syscall # ", "
+   		 
+   	move $a0, $a1
+   	syscall # prints the Name
+   		
+   	li $v0, 4
+   	la $a0, COMMA
+   	syscall # ", "
+   		
+   	li $v0, 1
+   	move $a0, $a2
+   	syscall # prints the balance
+   		
+   	li $v0, 4
+   	la $a0, DOWN_LINE
+   	syscall # enters line
+   	
+   	move $sp, $fp
+   	lw $fp, ($sp)
+   	addi $sp, $sp, 4
+   	jr $ra
+
+# a0 = id
+# v0 = 0 - not found, 1 - found
+# v1 = address of customer in array
+find_customer:
+	la $t0, CUSTOMERS
+	lw $t1, Customer_Count
+	lw $t2, CUSTOMER_SIZE
+	
+	find_customer_loop:
+		beq $t1, $zero, not_found
+		lw $t3, ($t0)
+		beq $t3, $a0, found
+		add $t0, $t0, $t2 # t0 += CUSTOMER_SIZE
+		subi $t1, $t1, 1 # customersToCheck -= 1
+		j find_customer_loop
+		
+	not_found:
+		move $v0, $zero
+		j end_find_customer
+
+	found:
+		li $v0, 1
+		move $v1, $t0
+		j end_find_customer
+	
+	end_find_customer:
+		jr $ra
+		
+# a0 = id
+error_customer_doesnt_exist:
+	move $t0, $a0
+	li $v0, 4
+    	la $a0, ERROR_CUSTOMER_NOT_EXIST
+    	syscall
+    	
+    	li $v0, 1
+    	move $a0, $t0
+    	syscall
+    	
+    	li $v0, 4
+    	la $a0, ERROR_DOESNOT_EXIST
+    	syscall # prints the error message
+
+# a0 = id, a1 = address of name, a2 = balance, a3 = address to store
+insert_customer:	
+	subi $sp, $sp, 4
+	sw $fp, ($sp)
+	move $fp, $sp
+	
+	move $t0, $a3
+	sw $a0, ($t0) # storing id
+	addi $t0, $t0, 4
+	move $t1, $t0 # iterator for the name memory in array
+	move $t2, $a1 # iterator for the name 
+	
+	store_name_loop:
+		lb $t3, ($t2)
+		beq $t3, $zero, end_name_loop
+		sb $t3, ($t1)
+		
+		addi $t1, $t1, 1
+		addi $t2, $t2, 1
+		j store_name_loop
+	end_name_loop:
+		
+	
+	add $t0, $t0, 100
+	
+	clean_name:
+		beq $t1, $t0, end_clean_name
+		sb $zero, ($t1)
+		addi $t1, $t1, 1
+	end_clean_name:
+	
+	sw $a2, ($t0) # storing balance
+	
+	move $sp, $fp
+	lw $fp ($sp)
+	addi $sp, $sp, 4
+	
+	jr $ra
+	
 exit_program:
 	li $v0, 10
 	syscall
